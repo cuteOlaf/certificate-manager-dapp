@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-pragma solidity >=0.4.22 <0.8.0; //locked compiler
+pragma solidity 0.8.0; //locked compiler
 
 import "./zeppelin/ownership/Ownable.sol";
+
 
 contract CertificateRegistry is Ownable {
     /**
@@ -23,7 +24,7 @@ contract CertificateRegistry is Ownable {
       A mapping of the document hash to the documentinfo that was issued
       This mapping is used to keep track of every certification document initiated for every student by an educator.
      */
-    mapping(bytes32 => DocumentInfo) documentRegistry;
+    mapping(bytes32 => DocumentInfo) private documentRegistry;
 
     // event for EVM logging
     event LogNewHashStored(
@@ -41,6 +42,27 @@ contract CertificateRegistry is Ownable {
     modifier onlyHashValueNotEmpty(bytes32 _documentHash) {
         require(_documentHash.length > 0, "Hash value not empty");
         _;
+    }
+
+    function owningAuthority() external view returns (address) {
+        return contractOwner;
+    }
+
+    function verifyCertificateData(bytes32 _documenteHash, uint256 _blockNumber)
+        external
+        view
+        returns (bool)
+    {
+        bool isVerified = false;
+
+        if (documentRegistry[_documenteHash].blockNumber == _blockNumber) {
+            // check if hash exists on blocknumber or not
+            if (documentRegistry[_documenteHash].isStored) {
+                isVerified = true;
+                return isVerified;
+            }
+        }
+        return isVerified;
     }
 
     /*
@@ -64,29 +86,7 @@ contract CertificateRegistry is Ownable {
             });
 
         documentRegistry[_documentHash] = newDocInfo;
-
-        emit LogNewHashStored(msg.sender, block.timestamp, block.number, true);
-    }
-
-   function owningAuthority() external view returns (address) {
-    return contractOwner;
-  }
-
-    function verifyCertificateData(bytes32 _documenteHash, uint256 _blockNumber)
-        external
-        view
-        returns (bool)
-    {
-        bool isVerified = false;
-
-        if (documentRegistry[_documenteHash].blockNumber == _blockNumber) {
-            // check if hash exists on blocknumber or not
-            if (documentRegistry[_documenteHash].isStored) {
-                isVerified = true;
-                return isVerified;
-            }
-        }
-        return isVerified;
+        LogNewHashStored(msg.sender, block.timestamp, block.number, true);
     }
 
     function isHashStored(bytes32 _documentHash) internal view returns (bool) {
